@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import streamlit_echarts as ste
+import streamlit as st
 import jieba
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
@@ -20,15 +22,15 @@ def CreateCloud(filename,tag):
     wc=WordCloud(width=1000, height=800, background_color="white", max_words=200,mask=img_array,font_path="msyh.ttc")
     wc.generate_from_frequencies(word_counts)
     # 使用matplotlib库对词云图进行可视化
-    plt.figure(figsize=(10, 6))
+    figure=plt.figure(figsize=(10, 6))
     plt.imshow(wc, interpolation='bilinear')
     plt.axis("off")
-    plt.show()
+    st.pyplot(figure)
 def CreateMap(filename,tag):
     df = pd.read_csv(filename, encoding='utf-8')[tag]
     data = df.value_counts()
     datas = [(i, int(j)) for i, j in zip(data.index, data.values)]
-    print(datas)
+    #print(datas)
     geo = (Geo(init_opts=opts.InitOpts(width='1200px', height='550px', theme='dark'),is_ignore_nonexistent_coord=True)
     .add_schema(maptype="china")                       #maptype选择地图种类
     .add(series_name="评论数量",      # 系列名称
@@ -42,14 +44,15 @@ def CreateMap(filename,tag):
     .set_series_opts(label_opts=opts.LabelOpts(is_show=True))
     .set_global_opts(
         visualmap_opts=opts.VisualMapOpts(max_=300,is_piecewise=True),
-        title_opts=opts.TitleOpts(title="IKN在中国的分布热力图"))
+        title_opts=opts.TitleOpts(title="IKUN在中国的分布热力图"))
     )
+    #以HTML文件形式显示
     geo.render( 'IKUN在中国的分布热力图.html')
 def CreatePie(filename,tag):
     f = pd.read_csv(filename, encoding='utf-8')[tag]
     data = f.value_counts()
-    datas = [(i, int(j)) for i, j in zip(data.index, data.values)]
-    print(datas)
+    #datas = [(i, int(j)) for i, j in zip(data.index, data.values)]
+    #print(datas)
     provinces=[i for i, j in zip(data.index, data.values)]
     num = [int(j) for i, j in zip(data.index, data.values)]
     color_series = ['#FAE927','#E9E416','#C9DA36','#9ECB3C','#6DBC49',
@@ -67,7 +70,6 @@ def CreatePie(filename,tag):
     pie1 = Pie(init_opts=opts.InitOpts(width='1400px', height='800px'))
     # 设置颜色
     pie1.set_colors(color_series)
-
     pie1.add("", [list(z) for z in zip(v, d)],
         radius=["30%", "100%"],
         center=["50%", "50%"],
@@ -87,5 +89,4 @@ def CreatePie(filename,tag):
                                                font_weight="bold", font_family="SimHei"
                                                ),
                      )
-# 渲染在html页面上
-    pie1.render('IP属地比例.html')
+    ste.st_pyecharts(pie1)
