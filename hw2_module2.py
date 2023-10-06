@@ -19,7 +19,7 @@ def CreateCloud(filename,tag):
     word_counts=Counter(words)
     img=Image.open("leaf.png")
     img_array=np.array(img)
-    wc=WordCloud(width=1000, height=800, background_color="white", max_words=200,mask=img_array,font_path="msyh.ttc")
+    wc=WordCloud(width=1000, height=800, background_color="white", max_words=200,mask=img_array,font_path="STXINGKA.TTF")
     wc.generate_from_frequencies(word_counts)
     # 使用matplotlib库对词云图进行可视化
     figure=plt.figure(figsize=(10, 6))
