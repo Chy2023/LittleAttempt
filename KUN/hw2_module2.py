@@ -17,7 +17,7 @@ def CreateCloud(filename,tag):
     text="".join(str(i) for i in df[tag].tolist())
     words=jieba.cut(text)
     word_counts=Counter(words)
-    img=Image.open("KUN\leaf.png")
+    img=Image.open("KUN/leaf.png")
     img_array=np.array(img)
     wc=WordCloud(width=1000, height=800, background_color="white", max_words=200,mask=img_array,font_path="STXINGKA.TTF")
     wc.generate_from_frequencies(word_counts)
@@ -47,7 +47,7 @@ def CreateMap(filename,tag):
         title_opts=opts.TitleOpts(title="IKUN在中国的分布热力图"))
     )
     #It is displayed as an HTML file
-    geo.render( 'KUN\IKUN在中国的分布热力图.html')
+    geo.render( 'KUN/IKUN在中国的分布热力图.html')
 def CreatePie(filename,tag):
     f = pd.read_csv(filename, encoding='utf-8')[tag]
     data = f.value_counts()
