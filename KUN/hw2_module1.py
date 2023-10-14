@@ -21,7 +21,7 @@ class Data:
 def GetComment(headers,url):
     no=1
     head = ['NO','NAME','IP','GENDER','DESCRIPTION','DATE','COMMENT']
-    f=open("KUN\hw2.csv","w",newline='',encoding='utf_8')
+    f=open("KUN/hw2.csv","w",newline='',encoding='utf_8')
     writer=csv.writer(f)
     writer.writerow(head)
     for i in range(0,15):

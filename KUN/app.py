@@ -14,7 +14,7 @@ url="https://weibo.com/ajax/statuses/buildComments?is_reload=1&id=49300853479206
 #So we only need to call it once, and we already have 5000 pieces of data in the database
 #GetComment(headers,url)
 #Create a heatmap
-CreateMap("KUN\hw2.csv","IP")
+CreateMap("KUN/hw2.csv","IP")
 @ st.cache_data
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -28,11 +28,11 @@ add_selectbox = st.sidebar.selectbox(
 )
 if add_selectbox=="小黑子":
     st.sidebar.text("")
-    image1=Image.open("KUN\kun1.jpg")
+    image1=Image.open("KUN/kun1.jpg")
     st.sidebar.image(image1,caption="你就是小黑子？")
 elif add_selectbox=="真IKUN":
     st.sidebar.text("鸡你太美")
-    image1=Image.open("KUN\kun2.webp")
+    image1=Image.open("KUN/kun2.webp")
     st.sidebar.image(image1,caption="ctrl")
 else:
     st.sidebar.text("纯黑子是吧?")
@@ -42,11 +42,11 @@ if button1:
     st.text("2.对爬取的评论数据进行分析，绘制了IKUN群体的评论词云图、个人签名词云图。")
     st.text("3.绘制了IKUN群体的IP属地玫瑰图、国内分布热力图（以html形式打开）。")
     st.text("4.注意：本项目仅为学习目的，不含任何人身攻击及不实信息。")
-    image1=Image.open("KUN\kun.jpg")
+    image1=Image.open("KUN/kun.jpg")
     st.image(image1,caption="小黑子禁止入内")
 button=st.button("预览爬虫数据")
 if button:
-    df=pd.read_csv("KUN\hw2.csv")
+    df=pd.read_csv("KUN/hw2.csv")
     st.text(df)
     csv = convert_df(df)
     st.download_button(label="点击下载全部数据",data=csv,file_name="hw2.csv",mime='text/csv')
@@ -55,14 +55,14 @@ button2=st.button("词云图")
 if button2:
     tab1,tab2=st.tabs(["评论词云图","个人签名词云图"])
     with tab1:
-        CreateCloud("KUN\hw2.csv","COMMENT")
+        CreateCloud("KUN/hw2.csv","COMMENT")
     with tab2:
-        CreateCloud("KUN\hw2.csv","DESCRIPTION")
+        CreateCloud("KUN/hw2.csv","DESCRIPTION")
 button=st.button("IP属地比例")
 if button:
-    CreatePie("KUN\hw2.csv","IP")
+    CreatePie("KUN/hw2.csv","IP")
     st.text("（IKUN遍布全球，甚至在柬埔寨都有分布）")
-file=open("KUN\IKUN在中国的分布热力图.html",'r')
+file=open("KUN/IKUN在中国的分布热力图.html",'r')
 button=st.download_button(label="IKUN分布热力图",data=file,file_name="热力图.html",mime='str')
 if button:
     st.text("可以看到，国内IKUN大多分布在沿海地区")
