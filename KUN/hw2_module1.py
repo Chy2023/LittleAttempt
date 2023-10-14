@@ -2,8 +2,8 @@ import requests
 import json
 import csv
 import time
-#该模块用来从微博爬取评论数据
-#定义一个类，用来收集数据、对原始数据做一定处理
+#This module is used to crawl comment data from microblog
+#Define a class that collects data and does something with the raw data
 class Data:
     def __init__(self,data):
         self.date=data['created_at'].replace(" +0800 2023","")
@@ -12,15 +12,16 @@ class Data:
         self.ip=data['source'].replace("来自","")
         self.description=data['user']['description']
         self.gender=data['user']['gender']
-    #方便将数据写入csv文件
+    #Easy to write data to csv file
     def Row(self,no):
         row=[no,self.name,self.ip,self.gender,self.description,self.date,self.comment]
         return row
-#通过相邻评论页面的逻辑关系，循环获取评论；具体逻辑见实验报告
+#Through the logical relationship of adjacent comment pages, the review is obtained in a loop. 
+#See the experiment report for specific logic
 def GetComment(headers,url):
     no=1
     head = ['NO','NAME','IP','GENDER','DESCRIPTION','DATE','COMMENT']
-    f=open("hw2.csv","w",newline='',encoding='utf_8')
+    f=open("KUN\hw2.csv","w",newline='',encoding='utf_8')
     writer=csv.writer(f)
     writer.writerow(head)
     for i in range(0,15):
