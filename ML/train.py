@@ -3,21 +3,28 @@ import numpy as np
 import collections
 fname=r"ML\training_dataset.xls"
 df=pd.read_excel(fname)
-print(df.info())
 discrete,continuous=[],[]
 def Overview():
     global df,discrete,continuous
-    df.drop(df[pd.isna(df['RRR'])].index, inplace=True)
-    df.loc[df['RRR']!='无降水','RRR']=1
+    df.loc[(df['RRR']!='无降水') & (pd.notna(df['RRR'])),'RRR']=1
     df.loc[df['RRR']=='无降水','RRR']=0
-    df['RRR']=df['RRR'].astype('int64')
+    df['RRR']=df['RRR'].astype('float64')
     df.loc[df['VV']=='低于 0.1','VV']=0
     df['VV']=df['VV'].astype('float64')
-    df['tR']=df['tR'].astype('int64')
-    df["Date"],df['Time']='',''
-    df["Date"]=df["Time Stamp"].apply(lambda x:x[0:5])
+    df["Date"],df['Time'],df['Rainy']='','',''
+    df["Date"]=df["Time Stamp"].apply(lambda x:x[0:10])
     df['Time']=df["Time Stamp"].apply(lambda x:x[11:16])
     df.drop(columns=["Time Stamp"],inplace=True)
+    list1=set(df.loc[:,'Date'].values.tolist())
+    for item in list1:
+        list2=df.loc[df['Date']==item,'RRR'].values.tolist()
+        if 1 in list2:
+            df.loc[df['Date']==item,'Rainy']=1
+        elif np.isnan(list2).sum()==len(list2):
+            df.loc[df['Date']==item,'Rainy']=np.nan
+        else:
+            df.loc[df['Date']==item,'Rainy']=0
+    df.drop(df[pd.isna(df['Rainy'])].index, inplace=True)
     attribute=df.columns.values
     drop=[]
     list=df.notnull().mean()
@@ -28,19 +35,21 @@ def Overview():
             discrete.append(attribute[i])
         elif df.iloc[:,i].dtype=='int64':
             discrete.append(attribute[i])
-        elif attribute[i]=='ff3':
+        elif attribute[i]=='tR':
+            discrete.append(attribute[i])
+        elif attribute[i]=='RRR':
             discrete.append(attribute[i])
         else:
             continuous.append(attribute[i])
     df.drop(drop,axis=1,inplace=True)
-    discrete.remove('RRR')
+    discrete.remove('Rainy')
 Overview()
 def DiscreteProcess():
     global discrete,df
     dict0,dict1={},{}
     for attribute in discrete:
         df_new=df.drop(df[pd.isna(df[attribute])].index)
-        df0,df1=df_new.loc[df['RRR']==0],df_new.loc[df['RRR']==1]
+        df0,df1=df_new.loc[df['Rainy']==0],df_new.loc[df['Rainy']==1]
         T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
         D0,D1=dict(collections.Counter(T0)),dict(collections.Counter(T1))
         V=list(set(T0+T1))
@@ -64,7 +73,7 @@ def ContinuousProcess():
     dict0,dict1={},{}
     for attribute in continuous:
         df_new=df.drop(df[pd.isna(df[attribute])].index)
-        df0,df1=df_new.loc[df['RRR']==0],df_new.loc[df['RRR']==1]
+        df0,df1=df_new.loc[df['Rainy']==0],df_new.loc[df['Rainy']==1]
         T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
         list0,list1=[],[]
         list0.append(np.mean(T0))
@@ -75,7 +84,7 @@ def ContinuousProcess():
     return dict0,dict1
 def PriorPro():
     global df
-    df0,df1=df.loc[df['RRR']==0],df.loc[df['RRR']==1]
+    df0,df1=df.loc[df['Rainy']==0],df.loc[df['Rainy']==1]
     P0,P1=len(df0)/len(df),len(df1)/len(df)
     return P0,P1
 dict0_c,dict1_c=ContinuousProcess()
@@ -85,7 +94,7 @@ tp=tn=fp=fn=0
 for i in range(0,len(df)):
     data=df.iloc[i]
     sum0,sum1=np.log(P0),np.log(P1)
-    if(data['RRR']==0):
+    if(data['Rainy']==0):
         label=0
     else:
         label=1
