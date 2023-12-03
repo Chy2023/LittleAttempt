@@ -15,15 +15,47 @@ def Overview():
     df["Date"]=df["Time Stamp"].apply(lambda x:x[0:10])
     df['Time']=df["Time Stamp"].apply(lambda x:x[11:16])
     df.drop(columns=["Time Stamp"],inplace=True)
-    list1=set(df.loc[:,'Date'].values.tolist())
+    """ i,str=0,df.iloc[0]['Date']
+    index=df.columns.get_loc('Rainy')
+    begin=end=0
+    while i<len(df):
+        list1=[]
+        while i<len(df) and str==df.iloc[i]['Date']:
+            list1.append(df.iloc[i]['RRR'])
+            i+=1
+        end=i
+        if i==len(df):
+            break
+        if 1 in list1:
+            df.iloc[begin:(end+1),index]=1
+        elif np.isnan(list1).sum()==0:
+            df.iloc[begin:end,index]=0
+        else:
+            df.iloc[begin:(end+1),index]=np.nan
+        begin=i
+        str=df.iloc[i]['Date'] """
+    """ list1=set(df.loc[:,'Date'].values.tolist())
     for item in list1:
         list2=df.loc[df['Date']==item,'RRR'].values.tolist()
         if 1 in list2:
             df.loc[df['Date']==item,'Rainy']=1
-        elif np.isnan(list2).sum()==len(list2):
-            df.loc[df['Date']==item,'Rainy']=np.nan
-        else:
+        elif np.isnan(list2).sum()==0:
             df.loc[df['Date']==item,'Rainy']=0
+        else:
+            df.loc[df['Date']==item,'Rainy']=np.nan """
+    dict1=dict(df['Date'].value_counts(sort=False))
+    index=df.columns.get_loc('Rainy')
+    begin=end=0
+    for item in dict1.values():
+        end+=item
+        list1=df.iloc[begin:end]['RRR'].values.tolist()
+        if 1 in list1:
+            df.iloc[begin:end,index]=1
+        elif np.isnan(list1).sum()==0:
+            df.iloc[begin:end,index]=0
+        else:
+            df.iloc[begin:end,index]=np.nan
+        begin=end
     df.drop(df[pd.isna(df['Rainy'])].index, inplace=True)
     attribute=df.columns.values
     drop=[]
@@ -44,6 +76,9 @@ def Overview():
     df.drop(drop,axis=1,inplace=True)
     discrete.remove('Rainy')
 Overview()
+""" dict1=dict(collections.Counter(df.loc[:,'Date'].values.tolist()))
+set1=set(dict1.values())
+print(set1) """
 def DiscreteProcess():
     global discrete,df
     dict0,dict1={},{}
@@ -122,6 +157,7 @@ print("Accuracy={}".format((tp+tn)/(tp+tn+fn+fp)))
 print("Precision={}".format(tp/(tp+fp)))
 print("Recall={}".format(tp/(tp+fn)))
 print("F-score={}".format(2/(2+(fn+fp)/tp)))
+print(df.info())
 """ print(discrete)
 print(continuous)
 print(dict0_c)
