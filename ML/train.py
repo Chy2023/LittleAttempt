@@ -125,7 +125,40 @@ def PriorPro():
 dict0_c,dict1_c=ContinuousProcess()
 dict0_d,dict1_d=DiscreteProcess()
 P0,P1=PriorPro()
+dict1=dict(df['Date'].value_counts(sort=False))
+begin=end=0
 tp=tn=fp=fn=0
+for item in dict1.values():
+    end+=item
+    sum0,sum1=np.log(P0),np.log(P1)
+    if(df.iloc[begin]['Rainy']==0):
+        label=0
+    else:
+        label=1
+    for i in range(begin,end):
+        data=df.iloc[i]
+        for attribute in discrete:
+            if data[attribute] in dict0_d[attribute]:
+                sum0+=dict0_d[attribute][data[attribute]]
+            if data[attribute] in dict1_d[attribute]:
+                sum1+=dict1_d[attribute][data[attribute]]
+        for attribute in continuous:
+            if pd.isna(data[attribute]):
+                continue
+            mean,var=dict0_c[attribute][0],dict0_c[attribute][1]
+            sum0+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
+            mean,var=dict1_c[attribute][0],dict1_c[attribute][1]
+            sum1+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
+    if (sum0>=sum1 and label==0):
+        tn+=item
+    elif (sum0>=sum1 and label==1):
+        fn+=item
+    elif (sum0<=sum1 and label==1):
+        tp+=item
+    else:
+        fp+=item
+    begin=end
+""" tp=tn=fp=fn=0
 for i in range(0,len(df)):
     data=df.iloc[i]
     sum0,sum1=np.log(P0),np.log(P1)
@@ -152,7 +185,7 @@ for i in range(0,len(df)):
     elif (sum0<=sum1 and label==1):
         tp+=1
     else:
-        fp+=1
+        fp+=1 """
 print("Accuracy={}".format((tp+tn)/(tp+tn+fn+fp)))
 print("Precision={}".format(tp/(tp+fp)))
 print("Recall={}".format(tp/(tp+fn)))
