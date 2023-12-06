@@ -11,39 +11,14 @@ def Overview():
     df['RRR']=df['RRR'].astype('float64')
     df.loc[df['VV']=='低于 0.1','VV']=0
     df['VV']=df['VV'].astype('float64')
-    df["Date"],df['Time'],df['Rainy']='','',''
+    df["Date"],df['Rainy']='',''
     df["Date"]=df["Time Stamp"].apply(lambda x:x[0:10])
-    df['Time']=df["Time Stamp"].apply(lambda x:x[11:16])
+    df['Month']=''
+    df['Month']=df["Time Stamp"].apply(lambda x:x[3:5])
     df.drop(columns=["Time Stamp"],inplace=True)
-    """ i,str=0,df.iloc[0]['Date']
-    index=df.columns.get_loc('Rainy')
-    begin=end=0
-    while i<len(df):
-        list1=[]
-        while i<len(df) and str==df.iloc[i]['Date']:
-            list1.append(df.iloc[i]['RRR'])
-            i+=1
-        end=i
-        if i==len(df):
-            break
-        if 1 in list1:
-            df.iloc[begin:(end+1),index]=1
-        elif np.isnan(list1).sum()==0:
-            df.iloc[begin:end,index]=0
-        else:
-            df.iloc[begin:(end+1),index]=np.nan
-        begin=i
-        str=df.iloc[i]['Date'] """
-    """ list1=set(df.loc[:,'Date'].values.tolist())
-    for item in list1:
-        list2=df.loc[df['Date']==item,'RRR'].values.tolist()
-        if 1 in list2:
-            df.loc[df['Date']==item,'Rainy']=1
-        elif np.isnan(list2).sum()==0:
-            df.loc[df['Date']==item,'Rainy']=0
-        else:
-            df.loc[df['Date']==item,'Rainy']=np.nan """
     dict1=dict(df['Date'].value_counts(sort=False))
+    df.drop(columns=["Date"],inplace=True)
+    df.drop(columns=["tR"],inplace=True)
     index=df.columns.get_loc('Rainy')
     begin=end=0
     for item in dict1.values():
@@ -51,7 +26,7 @@ def Overview():
         list1=df.iloc[begin:end]['RRR'].values.tolist()
         if 1 in list1:
             df.iloc[begin:end,index]=1
-        elif np.isnan(list1).sum()==0:
+        elif np.isnan(list1).sum()==0 and len(list1)==8:
             df.iloc[begin:end,index]=0
         else:
             df.iloc[begin:end,index]=np.nan
@@ -76,9 +51,6 @@ def Overview():
     df.drop(drop,axis=1,inplace=True)
     discrete.remove('Rainy')
 Overview()
-""" dict1=dict(collections.Counter(df.loc[:,'Date'].values.tolist()))
-set1=set(dict1.values())
-print(set1) """
 def DiscreteProcess():
     global discrete,df
     dict0,dict1={},{}
@@ -125,7 +97,36 @@ def PriorPro():
 dict0_c,dict1_c=ContinuousProcess()
 dict0_d,dict1_d=DiscreteProcess()
 P0,P1=PriorPro()
+
+fname=r"ML\testdata.xls"
+df=pd.read_excel(fname)
+df.loc[(df['RRR']!='无降水') & (pd.notna(df['RRR'])),'RRR']=1
+df.loc[df['RRR']=='无降水','RRR']=0
+df['RRR']=df['RRR'].astype('float64')
+df.loc[df['VV']=='低于 0.1','VV']=0
+df['VV']=df['VV'].astype('float64')
+df["Date"],df['Rainy']='',''
+df["Date"]=df["Time Stamp"].apply(lambda x:x[0:10])
+df['Month']=''
+df['Month']=df["Time Stamp"].apply(lambda x:x[3:5])
+df.drop(columns=["Time Stamp"],inplace=True)
 dict1=dict(df['Date'].value_counts(sort=False))
+index=df.columns.get_loc('Rainy')
+begin=end=0
+for item in dict1.values():
+    end+=item
+    list1=df.iloc[begin:end]['RRR'].values.tolist()
+    if 1 in list1:
+        df.iloc[begin:end,index]=1
+    elif np.isnan(list1).sum()==0 and len(list1)==8:
+        df.iloc[begin:end,index]=0
+    else:
+        df.iloc[begin:end,index]=np.nan
+    begin=end
+df.drop(df[pd.isna(df['Rainy'])].index, inplace=True)
+dict1=dict(df['Date'].value_counts(sort=False))
+df.drop(columns=["Date"],inplace=True)
+df.drop(columns=["tR"],inplace=True)
 begin=end=0
 tp=tn=fp=fn=0
 for item in dict1.values():
@@ -138,6 +139,10 @@ for item in dict1.values():
     for i in range(begin,end):
         data=df.iloc[i]
         for attribute in discrete:
+            if pd.isna(data[attribute]):
+                continue
+            if attribute=='N':
+                continue
             if data[attribute] in dict0_d[attribute]:
                 sum0+=dict0_d[attribute][data[attribute]]
             if data[attribute] in dict1_d[attribute]:
@@ -158,51 +163,11 @@ for item in dict1.values():
     else:
         fp+=item
     begin=end
-""" tp=tn=fp=fn=0
-for i in range(0,len(df)):
-    data=df.iloc[i]
-    sum0,sum1=np.log(P0),np.log(P1)
-    if(data['Rainy']==0):
-        label=0
-    else:
-        label=1
-    for attribute in discrete:
-        if data[attribute] in dict0_d[attribute]:
-            sum0+=dict0_d[attribute][data[attribute]]
-        if data[attribute] in dict1_d[attribute]:
-            sum1+=dict1_d[attribute][data[attribute]]
-    for attribute in continuous:
-        if pd.isna(data[attribute]):
-            continue
-        mean,var=dict0_c[attribute][0],dict0_c[attribute][1]
-        sum0+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
-        mean,var=dict1_c[attribute][0],dict1_c[attribute][1]
-        sum1+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
-    if (sum0>=sum1 and label==0):
-        tn+=1
-    elif (sum0>=sum1 and label==1):
-        fn+=1
-    elif (sum0<=sum1 and label==1):
-        tp+=1
-    else:
-        fp+=1 """
 print("Accuracy={}".format((tp+tn)/(tp+tn+fn+fp)))
 print("Precision={}".format(tp/(tp+fp)))
 print("Recall={}".format(tp/(tp+fn)))
 print("F-score={}".format(2/(2+(fn+fp)/tp)))
 print(df.info())
-""" print(discrete)
-print(continuous)
-print(dict0_c)
-print(dict1_c)
-for attribute in discrete:
-    if attribute=='Date':
-        continue
-    print(dict0_d[attribute])
-for attribute in discrete:
-    if attribute=='Date':
-        continue
-    print(dict1_d[attribute])    """ 
 #高斯贝叶斯+多项式贝叶斯分类器
 #数据完整度不足20%的舍去。9：(8,9,15,18,19,24,25,26,27)
 #贝叶斯分类器忽略了缺失的数据，平滑系数alpha
