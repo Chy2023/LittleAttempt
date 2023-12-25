@@ -4,8 +4,9 @@ import collections
 import json
 #Rainy:0,Not Rainy:1;
 def PreProcess(df):
-    df.loc[(df['RRR']!='无降水') & (pd.notna(df['RRR'])),'RRR']=0
+    df.loc[(df['RRR']!='无降水') & (pd.notna(df['RRR'])) & (df['RRR']!='降水迹象'),'RRR']=0
     df.loc[df['RRR']=='无降水','RRR']=1
+    df.loc[df['RRR']=='降水迹象','RRR']=1
     df['RRR']=df['RRR'].astype('float64')
     df.loc[df['VV']=='低于 0.1','VV']=0
     df['VV']=df['VV'].astype('float64')
@@ -38,6 +39,8 @@ def TagSort(df):
             drop.append(attribute[i])
         elif attribute[i] in ['N','Nh','Cm']:
             drop.append(attribute[i])
+        elif attribute[i]=='Ff':
+            continuous.append(attribute[i])
         elif df.iloc[:,i].dtype=='object':
             discrete.append(attribute[i])
         elif df.iloc[:,i].dtype=='int64':

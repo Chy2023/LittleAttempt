@@ -3,7 +3,10 @@ import numpy as np
 from sklearn.metrics import f1_score
 import argparse
 import test
-
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_score
+from sklearn.metrics import accuracy_score 
+#python ML/main.py --test_data_path=ML\data.xlsx
 ## your model path should takes the form as
 Model_Path = '/home/hyliu/ML_Project/model.json'
 ## for TA's test
@@ -36,3 +39,7 @@ if __name__ == '__main__':
     pred = bot.predict(args.test_data_path)
     macro_f1 = f1_score(y_true=true, y_pred=pred, average="macro")
     print(macro_f1)
+    print(confusion_matrix(y_true=true, y_pred=pred))
+    print(precision_score(y_true=true, y_pred=pred, labels=None, pos_label=1,
+                 average='binary'))
+    print(accuracy_score(true, pred))
