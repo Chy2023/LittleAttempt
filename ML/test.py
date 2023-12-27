@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import json
+import math
 fname=r"ML\model.json"
 with open(fname, mode='r', encoding='utf-8') as f:
     datas=json.load(f)
@@ -17,6 +18,9 @@ def PreProcess(df):
     df['VV']=df['VV'].astype('float64')
     df['Month']=''
     df['Month']=df["Time Stamp"].apply(lambda x:x[3:5])
+    df['Month']=df['Month'].astype('int64')
+    df['Time']=''
+    df['Time']=df["Time Stamp"].apply(lambda x:x[11:13])
     df.drop(columns=["Time Stamp","tR"],inplace=True)
 def Predict(df):
     begin=end=0
@@ -24,26 +28,43 @@ def Predict(df):
     y=np.zeros(size)
     while begin<size:
         end+=8
-        sum0,sum1=np.log(P0),np.log(P1)
+        month=str(df.iloc[begin]['Month'])
+        sum0,sum1=P0[month],P1[month]
         for i in range(begin,end):
             data=df.iloc[i]
+            time=data['Time']
             for attribute in discrete:
                 if pd.isna(data[attribute]):
                     continue
-                if data[attribute] in dict0_d[attribute]:
-                    sum0+=dict0_d[attribute][data[attribute]]
-                if data[attribute] in dict1_d[attribute]:
-                    sum1+=dict1_d[attribute][data[attribute]]
+                if attribute=='H':
+                    continue
+                if attribute=='W2':
+                    continue
+                if data[attribute] in dict0_d[attribute][month][time]:
+                    sum0+=dict0_d[attribute][month][time][data[attribute]]
+                if data[attribute] in dict1_d[attribute][month][time]:
+                    sum1+=dict1_d[attribute][month][time][data[attribute]]
             for attribute in continuous:
                 if pd.isna(data[attribute]):
                     continue
-                mean,var=dict0_c[attribute][0],dict0_c[attribute][1]
+                mean,var=dict0_c[attribute][month][time][0],dict0_c[attribute][month][time][1]
                 sum0+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
-                mean,var=dict1_c[attribute][0],dict1_c[attribute][1]
+                mean,var=dict1_c[attribute][month][time][0],dict1_c[attribute][month][time][1]
                 sum1+=-0.5*np.log(2*np.pi*var)-0.5*np.power((data[attribute]-mean),2)/var
-        if sum0>=sum1:
+        #p=np.power(np.e,sum0)/(np.power(np.e,sum0)+np.power(np.e,sum1))
+        p=1-sum0/(sum0+sum1)
+        print(p,1-p)
+        if p>=0.5:
             y[begin:end]=0
-        else:
+        elif p<=0.5:
             y[begin:end]=1
+        else:
+            num=math.ceil(p*8)
+            y[begin:begin+num]=0
+            y[begin+num:end]=1
         begin=end
     return y
+""" data_path=r'ML\data.xlsx'
+df=pd.read_excel(data_path)
+PreProcess(df)
+pred=Predict(df) """

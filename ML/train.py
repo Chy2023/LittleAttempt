@@ -7,13 +7,25 @@ def PreProcess(df):
     df.loc[(df['RRR']!='无降水') & (pd.notna(df['RRR'])) & (df['RRR']!='降水迹象'),'RRR']=0
     df.loc[df['RRR']=='无降水','RRR']=1
     df.loc[df['RRR']=='降水迹象','RRR']=1
+    df.loc[pd.isna(df['RRR']),'RRR']=1
     df['RRR']=df['RRR'].astype('float64')
     df.loc[df['VV']=='低于 0.1','VV']=0
     df['VV']=df['VV'].astype('float64')
     df["Date"],df['Month']='',''
     df["Date"]=df["Time Stamp"].apply(lambda x:x[0:10])
     df['Month']=df["Time Stamp"].apply(lambda x:x[3:5])
+    df['Month']=df['Month'].astype('int64')
+    df['Time']=''
+    df['Time']=df["Time Stamp"].apply(lambda x:x[11:13])
+    df['Year']=''
+    df['Year']=df["Time Stamp"].apply(lambda x:x[8:10])
+    A=['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18']
+    B=['18','17','16','15','14','13','12']
+    for year in A :
+        if year not in B:
+            df.drop(df[df['Year']==year].index, inplace=True)
     df.drop(columns=["Time Stamp","tR"],inplace=True)
+    df.drop(columns=["Year"],inplace=True)
 def AddLabel(df):
     list=dict(df['Date'].value_counts(sort=False)).values()
     index=df.columns.get_loc('RRR')
@@ -41,6 +53,10 @@ def TagSort(df):
             drop.append(attribute[i])
         elif attribute[i]=='Ff':
             continuous.append(attribute[i])
+        elif attribute[i]=='Month':
+            continue
+        elif attribute[i]=='Time':
+            continue
         elif df.iloc[:,i].dtype=='object':
             discrete.append(attribute[i])
         elif df.iloc[:,i].dtype=='int64':
@@ -54,40 +70,44 @@ def TagSort(df):
 def DiscreteProcess(alpha,df,discrete):
     dict0,dict1={},{}
     for attribute in discrete:
+        dict0[attribute],dict1[attribute]={},{}
         df_new=df.drop(df[pd.isna(df[attribute])].index)
-        df0,df1=df_new.loc[df['RRR']==0],df_new.loc[df['RRR']==1]
-        T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
-        D0,D1=dict(collections.Counter(T0)),dict(collections.Counter(T1))
-        V=list(set(T0+T1))
-        len0,len1,len2=len(T0),len(T1),len(V)
-        for word in V:
-            if word in D0:
-                n0=D0[word]
-            else:
-                n0=0
-            if word in D1:
-                n1=D1[word]
-            else:
-                n1=0
-            D0[word]=np.log((n0+alpha)/(len0+alpha*len2))
-            D1[word]=np.log((n1+alpha)/(len1+alpha*len2))
-        dict0[attribute]=D0
-        dict1[attribute]=D1
+        for month in range(1,13):
+            dict0[attribute][month],dict1[attribute][month]={},{}
+            for time in ['02','05','08','11','14','17','20','23']:
+                df0,df1=df_new.loc[(df['RRR']==0) & (df['Month']==month) & (df['Time']==time)],df_new.loc[(df['RRR']==1) & (df['Time']==time)]
+                T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
+                D0,D1=dict(collections.Counter(T0)),dict(collections.Counter(T1))
+                V=list(set(T0+T1))
+                len0,len1,len2=len(T0),len(T1),len(V)
+                for word in V:
+                    n0=D0.get(word,0)
+                    n1=D1.get(word,0)
+                    D0[word]=np.log((n0+alpha)/(len0+alpha*len2))
+                    D1[word]=np.log((n1+alpha)/(len1+alpha*len2))
+                dict0[attribute][month][time]=D0
+                dict1[attribute][month][time]=D1
     return dict0,dict1
 def ContinuousProcess(continuous,df):
     dict0,dict1={},{}
     for attribute in continuous:
+        dict0[attribute],dict1[attribute]={},{}
         df_new=df.drop(df[pd.isna(df[attribute])].index)
-        df0,df1=df_new.loc[df['RRR']==0],df_new.loc[df['RRR']==1]
-        T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
-        list0,list1=[],[]
-        list0.extend([np.mean(T0),np.var(T0)])
-        list1.extend([np.mean(T1),np.var(T1)])
-        dict0[attribute],dict1[attribute]=list0,list1
+        for month in range(1,13):
+            dict0[attribute][month],dict1[attribute][month]={},{}
+            for time in ['02','05','08','11','14','17','20','23']:
+                df0,df1=df_new.loc[(df['RRR']==0) & (df['Month']==month) & (df['Time']==time)],df_new.loc[(df['RRR']==1) & (df['Time']==time)]
+                T0,T1=df0.loc[:,attribute].values.tolist(),df1.loc[:,attribute].values.tolist()
+                list0,list1=[],[]
+                list0.extend([np.mean(T0),np.var(T0)])
+                list1.extend([np.mean(T1),np.var(T1)])
+                dict0[attribute][month][time],dict1[attribute][month][time]=list0,list1
     return dict0,dict1
 def PriorPro(df):
-    df0,df1=df.loc[df['RRR']==0],df.loc[df['RRR']==1]
-    P0,P1=len(df0)/len(df),len(df1)/len(df)
+    P0,P1={},{}
+    for month in range(1,13):
+        df0,df1=df.loc[(df['RRR']==0) & (df['Month']==month)],df.loc[(df['RRR']==1) & (df['Month']==month)]
+        P0[month],P1[month]=np.log(len(df0)/(len(df0)+len(df1))),np.log(len(df1)/(len(df0)+len(df1)))
     return P0,P1
 fname=r"ML\training_dataset.xls"
 df=pd.read_excel(fname)
