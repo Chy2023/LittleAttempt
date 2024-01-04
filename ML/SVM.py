@@ -3,7 +3,9 @@ import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OrdinalEncoder
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import f1_score
 import random
+import collections
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -30,8 +32,8 @@ for i in range(0,num):
 	for j in range(0,8):
 		x[i,15*j:15*j+15]=x0[8*i+j,:]
 for i in range(y.size):
-    if y[i]==0:
-        y[i]=-1
+	if y[i]==0:
+		y[i]=-1
 x=pd.DataFrame(x)
 y=pd.DataFrame(y)
 xtrain, xtest, y_train, y_test = x.copy(deep=True),x.copy(deep=True),y.copy(deep=True),y.copy(deep=True)
@@ -77,7 +79,7 @@ class optStruct:
 		toler - 容错率
 		kTup - 包含核函数信息的元组,第一个参数存放核函数类别，第二个参数存放必要的核函数需要用到的参数
 	"""
-	def __init__(self, dataMatIn, classLabels, C, toler, kTup):
+	def __init__(self, dataMatIn, classLabels, C, toler, kTup,class_weight):
 		self.X = dataMatIn								#数据矩阵
 		self.labelMat = classLabels						#数据标签
 		self.C = C 										#松弛变量
@@ -89,6 +91,7 @@ class optStruct:
 		self.K = np.mat(np.zeros((self.m,self.m)))		#初始化核K
 		for i in range(self.m):							#计算所有数据的核K
 			self.K[:,i] = kernelTrans(self.X, self.X[i,:], kTup)
+		self.class_weight=class_weight
 
 def kernelTrans(X, A, kTup): 
 	"""
@@ -214,12 +217,14 @@ def innerL(i, oS):
 		#保存更新前的aplpha值，使用深拷贝
 		alphaIold = oS.alphas[i].copy(); alphaJold = oS.alphas[j].copy()
 		#步骤2：计算上下界L和H
+		Ci=oS.C*oS.class_weight[oS.labelMat[i,0]]
+		Cj=oS.C*oS.class_weight[oS.labelMat[j,0]]
 		if (oS.labelMat[i] != oS.labelMat[j]):
 			L = max(0, oS.alphas[j] - oS.alphas[i])
-			H = min(oS.C, oS.C + oS.alphas[j] - oS.alphas[i])
+			H = min(Cj, Ci + oS.alphas[j] - oS.alphas[i])
 		else:
-			L = max(0, oS.alphas[j] + oS.alphas[i] - oS.C)
-			H = min(oS.C, oS.alphas[j] + oS.alphas[i])
+			L = max(0, oS.alphas[j] + oS.alphas[i] - Ci)
+			H = min(Cj, oS.alphas[j] + oS.alphas[i])
 		if L == H: 
 			print("L==H")
 			return 0
@@ -245,8 +250,8 @@ def innerL(i, oS):
 		b1 = oS.b - Ei- oS.labelMat[i]*(oS.alphas[i]-alphaIold)*oS.K[i,i] - oS.labelMat[j]*(oS.alphas[j]-alphaJold)*oS.K[i,j]
 		b2 = oS.b - Ej- oS.labelMat[i]*(oS.alphas[i]-alphaIold)*oS.K[i,j]- oS.labelMat[j]*(oS.alphas[j]-alphaJold)*oS.K[j,j]
 		#步骤8：根据b_1和b_2更新b
-		if (0 < oS.alphas[i]) and (oS.C > oS.alphas[i]): oS.b = b1
-		elif (0 < oS.alphas[j]) and (oS.C > oS.alphas[j]): oS.b = b2
+		if (0 < oS.alphas[i]) and (Ci > oS.alphas[i]): oS.b = b1
+		elif (0 < oS.alphas[j]) and (Cj > oS.alphas[j]): oS.b = b2
 		else: oS.b = (b1 + b2)/2.0
 		return 1
 	else: 
@@ -266,7 +271,10 @@ def smoP(dataMatIn, classLabels, C, toler, maxIter, kTup = ('rbf',1/120)):
 		oS.b - SMO算法计算的b
 		oS.alphas - SMO算法计算的alphas
 	"""
-	oS = optStruct(np.mat(dataMatIn), np.mat(classLabels).transpose(), C, toler, kTup)				#初始化数据结构
+	class_weight=dict(collections.Counter(classLabels))
+	for item in class_weight:
+		class_weight[item]=len(classLabels)/2/class_weight[item]
+	oS = optStruct(np.mat(dataMatIn), np.mat(classLabels).transpose(), C, toler, kTup,class_weight)				#初始化数据结构
 	iter = 0 																						#初始化当前迭代次数
 	entireSet = True; alphaPairsChanged = 0
 	while (iter < maxIter) and ((alphaPairsChanged > 0) or (entireSet)):							#遍历整个数据集都alpha也没有更新或者超过最大迭代次数,则退出循环
@@ -316,11 +324,17 @@ def testRbf(k1 = 1/120):
 	errorCount = 0
 	datMat = np.mat(dataArr); labelMat = np.mat(labelArr).transpose() 		
 	m,n = np.shape(datMat)
+	result=np.zeros(m)
 	for i in range(m):
 		kernelEval = kernelTrans(sVs,datMat[i,:],('rbf', k1)) 				#计算各个点的核			
 		predict=kernelEval.T * np.multiply(labelSV,alphas[svInd]) + b 		#根据支持向量的点，计算超平面，返回预测结果
 		if np.sign(predict) != np.sign(labelArr[i]): errorCount += 1    	#返回数组中各元素的正负符号，用1和-1表示，并统计错误个数
+		if np.sign(predict)==-1:
+			result[i]=-1
+		else:
+			result[i]=1
 	print("测试集错误率: %.2f%%" % ((float(errorCount)/m)*100)) 			#打印错误率
-
+	macro=f1_score(y_true=y_test, y_pred=result, average="macro")
+	print(macro)
 
 testRbf()
